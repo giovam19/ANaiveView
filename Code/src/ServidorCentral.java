@@ -10,88 +10,62 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Set;
 
-public class ServidorCentral {
+public class ServidorCentral extends Thread{
     private final int PUERTO = 1234;
     private ServerSocket server;
-    private Socket socket;
+    private ArrayList<Socket> sockets;
     private DataInputStream input;
     private DataOutputStream out;
     private String message;
-
-    private Selector selector;
-    private SelectionKey selectionKey;
-    private ServerSocketChannel socketChannel;
-    private InetSocketAddress socketAddr;
+    private int value;
 
     public ServidorCentral() {
         try {
-            /*server = new ServerSocket(PUERTO);
-            socket = new Socket();*/
+            server = new ServerSocket(PUERTO);
+            sockets = new ArrayList<>();
             message = "null";
-
-            selector = Selector.open();
-            socketChannel = ServerSocketChannel.open();
-            socketAddr = new InetSocketAddress("localhost", PUERTO);
-            socketChannel.bind(socketAddr);
-            socketChannel.configureBlocking(false);
-            int ops = socketChannel.validOps();
-            selectionKey = socketChannel.register(selector, ops, null);
+            value = 1;
 
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
     }
 
-    public void startCentralServerNIO() {
-        while (true) {
-            System.out.println("Waiting for connections ...");
-
-            Set<SelectionKey> keys = selector.selectedKeys();
-            Iterator<SelectionKey> iterator = keys.iterator();
-
-            while (iterator.hasNext()) {
-                SelectionKey myKey = iterator.next();
-
-                if (myKey.isAcceptable()) {
-                    try {
-                        SocketChannel client = socketChannel.accept();
-                        client.configureBlocking(false);
-                        client.register(selector, SelectionKey.OP_READ);
-                        System.out.println("Connection accepted: " + client.getLocalAddress());
-                    } catch (Exception e) {
-                        System.out.println(e.getMessage());
-                    }
-                } else if (myKey.isReadable()) {
-                    SocketChannel client = (SocketChannel) myKey.channel();
-                    ByteBuffer
-                    client.read();
-                    String result = new String()
-                }
-            }
+    public void startCentralServer() {
+        try {
+            System.out.println("Esperando...");
+            sockets.add(server.accept()); //Accept comienza el socket y espera una conexión desde un cliente
+            System.out.println("Cliente en línea");
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
         }
     }
 
-    public void startCentralServer() {
+    public void run() {
         try {
-            //TODO: buscar multi-cliente con libreria NIO.
-            System.out.println("Esperando...");
-            socket = server.accept(); //Accept comienza el socket y espera una conexión desde un cliente
-            System.out.println("Cliente en línea");
+            for (Socket s : sockets) {
+                input = new DataInputStream(new BufferedInputStream(s.getInputStream()));
+                out = new DataOutputStream(s.getOutputStream());
 
-            input = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
-            out = new DataOutputStream(socket.getOutputStream());
+                if (input.available() > 0) {
+                    message = input.readUTF();//U-n ; R-
+                    String[] data = message.split("-");
 
-            while (!message.equals("fin")) {
-                message = input.readUTF();
-                System.out.println("Mensaje: " + message);
+                    if (data[0].equals("U")){
+                        //UPDATE
+                        value = Integer.parseInt(data[1]);
+                        out.writeUTF(Integer.toString(value));
+                    } else if (data[0].equals("R")){
+                        //READ
+                        out.writeUTF(Integer.toString(value));
+                    }
+                }
             }
-
-            System.out.println("Fin de la conexión");
-            server.close();//Se finaliza la conexión con el cliente
-        } catch (IOException e) {
+        } catch (Exception e) {
             System.out.println(e.getMessage());
         }
     }

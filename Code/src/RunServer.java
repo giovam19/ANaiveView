@@ -1,3 +1,5 @@
+import java.util.ArrayList;
+
 public class RunServer {
     public static void main(String[] args) {
         try {
@@ -5,8 +7,13 @@ public class RunServer {
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
-        Servidores server = new Servidores();
-        System.out.println("Iniciando servidor\n");
-        server.startServer();
+        ArrayList<Servidores> clients = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            clients.add(new Servidores(i % 2));
+        }
+
+        for (Servidores s : clients) {
+            s.start();
+        }
     }
 }
