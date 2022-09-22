@@ -7,13 +7,17 @@ public class RunServer {
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
-        ArrayList<Servidores> clients = new ArrayList<>();
+
+        Servidores server = new Servidores(1);
+        server.startServer();
+
+        /*ArrayList<Servidores> clients = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
             clients.add(new Servidores(i % 2));
         }
 
         for (Servidores s : clients) {
             s.start();
-        }
+        }*/
     }
 }

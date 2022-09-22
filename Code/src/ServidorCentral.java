@@ -1,7 +1,4 @@
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -18,8 +15,9 @@ public class ServidorCentral extends Thread{
     private final int PUERTO = 1234;
     private ServerSocket server;
     private ArrayList<Socket> sockets;
-    private DataInputStream input;
-    private DataOutputStream out;
+    private Socket aux;
+    private BufferedReader input;
+    private PrintWriter out;
     private String message;
     private int value;
 
@@ -27,6 +25,7 @@ public class ServidorCentral extends Thread{
         try {
             server = new ServerSocket(PUERTO);
             sockets = new ArrayList<>();
+            aux = new Socket();
             message = "null";
             value = 1;
 
@@ -35,38 +34,54 @@ public class ServidorCentral extends Thread{
         }
     }
 
-    public void startCentralServer() {
-        try {
-            System.out.println("Esperando...");
-            sockets.add(server.accept()); //Accept comienza el socket y espera una conexión desde un cliente
-            System.out.println("Cliente en línea");
-        } catch (IOException e) {
-            System.out.println(e.getMessage());
+    public void run() {
+        while (true) {
+            try {
+                System.out.println("Esperando...");
+                aux = server.accept();
+                sockets.add(aux); //Accept comienza el socket y espera una conexión desde un cliente
+                System.out.println("Cliente en línea\n");
+
+            } catch (IOException e) {
+                System.out.println(e.getMessage());
+                break;
+            }
         }
     }
 
-    public void run() {
-        try {
-            for (Socket s : sockets) {
-                input = new DataInputStream(new BufferedInputStream(s.getInputStream()));
-                out = new DataOutputStream(s.getOutputStream());
+    public void listenRequest() {
+        while (true) {
+            try {
+                for (Socket s : sockets) {
+                    System.out.println("is in bucle");
+                    input = new BufferedReader(new InputStreamReader(s.getInputStream()));
+                    out = new PrintWriter(s.getOutputStream(), true);
 
-                if (input.available() > 0) {
-                    message = input.readUTF();//U-n ; R-
-                    String[] data = message.split("-");
+                    if (input.ready()) {
+                        System.out.println("Socket receiving message ...");
+                        message = input.readLine();//U-n ; R-
+                        String[] data = message.split("-");
+                        System.out.println("Message received ...");
 
-                    if (data[0].equals("U")){
-                        //UPDATE
-                        value = Integer.parseInt(data[1]);
-                        out.writeUTF(Integer.toString(value));
-                    } else if (data[0].equals("R")){
-                        //READ
-                        out.writeUTF(Integer.toString(value));
+                        if (data[0].equals("U")) {
+                            //UPDATE
+                            System.out.println("Receive updated ...");
+                            value = Integer.parseInt(data[1]);
+                            //out.writeUTF(Integer.toString(value));
+                        } else if (data[0].equals("R")) {
+                            //READ
+                            System.out.println("Receive read ...");
+                            message = Integer.toString(value);
+                            out.print(message);
+                        }
+                    } else {
+                        System.out.println("waiting message ...");
                     }
                 }
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+                break;
             }
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
         }
     }
 }

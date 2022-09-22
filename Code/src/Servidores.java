@@ -1,44 +1,48 @@
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.util.Scanner;
 
-public class Servidores extends Thread{
+public class Servidores {
     private final int PUERTO = 1234;
     private final String HOST = "localhost";
     private Socket socket;
-    private DataInputStream input;
-    private DataOutputStream out;
+    private BufferedReader input;
+    private PrintWriter out;
     private String message;
     private int type;
     private int value;
 
     public Servidores(int type) {
         try {
-            this.type = type;
             socket = new Socket(HOST, PUERTO);
             message = "null";
+            this.type = type;
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
     }
 
-    public void run() {
+    public void startServer() {
         try {
-            input = new DataInputStream(socket.getInputStream());
-            out = new DataOutputStream(socket.getOutputStream());
+            while (!socket.isConnected()){}
 
+            input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            out = new PrintWriter(socket.getOutputStream(), true);
+            System.out.println("inicia thread.");
             // Dependiendo del tipo, hacemos lectura o cambiamos el valor
             if (type == 1) {
+                System.out.println("es update.");
                 for (int i=0; i<10; i++) {
                     value = getCurrentValue();
                     updateValue(value+1);
+                    System.out.println("Value updated to " + value + ".");
                     Thread.sleep(1000);
                 }
             } else {
+                System.out.println("es read.");
                 for (int i=0; i<10; i++) {
                     value = getCurrentValue();
+                    System.out.println("Read value = " + value + ".");
                     Thread.sleep(1000);
                 }
             }
@@ -51,11 +55,13 @@ public class Servidores extends Thread{
     }
 
     private int getCurrentValue() throws IOException {
-        out.writeUTF("R-0");
-        return Integer.parseInt(input.readUTF());
+        out.print("R-0");
+        message = input.readLine();
+        return Integer.parseInt(message);
     }
 
-    private void updateValue(int value) throws IOException {
-        out.writeUTF("U-" + value);
+    private void updateValue(int value) {
+        message = "U-"+value;
+        out.print(message);
     }
 }
