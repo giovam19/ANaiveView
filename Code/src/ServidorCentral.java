@@ -16,8 +16,9 @@ public class ServidorCentral extends Thread{
     private ServerSocket server;
     private ArrayList<Socket> sockets;
     private Socket aux;
-    private BufferedReader input;
-    private PrintWriter out;
+    private DataInputStream input;
+    private DataOutputStream out;
+    private BufferedReader br;
     private String message;
     private int value;
 
@@ -34,14 +35,13 @@ public class ServidorCentral extends Thread{
         }
     }
 
-    public void run() {
+    public void startServer() {
         while (true) {
             try {
                 System.out.println("Esperando...");
                 aux = server.accept();
                 sockets.add(aux); //Accept comienza el socket y espera una conexión desde un cliente
                 System.out.println("Cliente en línea\n");
-
             } catch (IOException e) {
                 System.out.println(e.getMessage());
                 break;
@@ -49,17 +49,17 @@ public class ServidorCentral extends Thread{
         }
     }
 
-    public void listenRequest() {
-        while (true) {
-            try {
+    @Override
+    public void run() {
+        try {
+            while (true) {
                 for (Socket s : sockets) {
-                    System.out.println("is in bucle");
-                    input = new BufferedReader(new InputStreamReader(s.getInputStream()));
-                    out = new PrintWriter(s.getOutputStream(), true);
+                    input = new DataInputStream(s.getInputStream());
+                    out = new DataOutputStream(s.getOutputStream());
 
-                    if (input.ready()) {
+                    if (input.available() > 0) {
                         System.out.println("Socket receiving message ...");
-                        message = input.readLine();//U-n ; R-
+                        message = input.readUTF();//U-n ; R-
                         String[] data = message.split("-");
                         System.out.println("Message received ...");
 
@@ -72,16 +72,15 @@ public class ServidorCentral extends Thread{
                             //READ
                             System.out.println("Receive read ...");
                             message = Integer.toString(value);
-                            out.print(message);
+                            out.writeUTF(message);
+                            out.flush();
                         }
-                    } else {
-                        System.out.println("waiting message ...");
                     }
                 }
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
-                break;
             }
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
         }
+
     }
 }

@@ -6,8 +6,8 @@ public class Servidores {
     private final int PUERTO = 1234;
     private final String HOST = "localhost";
     private Socket socket;
-    private BufferedReader input;
-    private PrintWriter out;
+    private DataInputStream input;
+    private DataOutputStream out;
     private String message;
     private int type;
     private int value;
@@ -26,8 +26,8 @@ public class Servidores {
         try {
             while (!socket.isConnected()){}
 
-            input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            out = new PrintWriter(socket.getOutputStream(), true);
+            input = new DataInputStream(socket.getInputStream());
+            out = new DataOutputStream(socket.getOutputStream());
             System.out.println("inicia thread.");
             // Dependiendo del tipo, hacemos lectura o cambiamos el valor
             if (type == 1) {
@@ -55,13 +55,15 @@ public class Servidores {
     }
 
     private int getCurrentValue() throws IOException {
-        out.print("R-0");
-        message = input.readLine();
+        out.writeUTF("R-0");
+        out.flush();
+        message = input.readUTF();
         return Integer.parseInt(message);
     }
 
-    private void updateValue(int value) {
+    private void updateValue(int value) throws IOException {
         message = "U-"+value;
-        out.print(message);
+        out.writeUTF(message);
+        out.flush();
     }
 }
