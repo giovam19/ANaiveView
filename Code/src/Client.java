@@ -26,15 +26,19 @@ public class Client extends Thread{
 
             if (type == UPDATE) {
                 for (int i = 0; i < 10; i++) {
+                    requestPriority();
                     value = getCurrentValue();
                     updateCurrentValue(value + 1);
+                    freePriority();
                     System.out.println("Client " + id + " Value updated to " + (value+1) + ".\n");
                     Thread.sleep(1000);
                 }
             } else if (type == READ) {
                 for (int i = 0; i < 10; i++) {
+                    requestPriority();
                     value = getCurrentValue();
                     System.out.println("Client " + id + " Value read: " + value + ".\n");
+                    freePriority();
                     Thread.sleep(1000);
                 }
             }
@@ -42,29 +46,75 @@ public class Client extends Thread{
             client.close();
             System.out.println("Fin de la conexión Client " + id);
         } catch (Exception e) {
-            System.out.println("Exception cl: " + e.getMessage());
+            System.out.println("Exception client"+id+": " + e.getCause() + " " + e.getMessage());
         }
     }
 
-    private int getCurrentValue() throws IOException {
-        ByteBuffer buffer = ByteBuffer.allocate(1024);
-        message = "R-0";
-        buffer.put(message.getBytes());
-        buffer.flip();
-        client.write(buffer);
-
-        buffer = ByteBuffer.allocate(1024);
-        client.read(buffer);
-        String data = new String(buffer.array()).trim();
-
-        return Integer.parseInt(data);
+    private void writeToServer(String message)   {
+        try {
+            ByteBuffer buffer = ByteBuffer.allocate(1024);
+            buffer.put(message.getBytes());
+            buffer.flip();
+            client.write(buffer);
+            Thread.sleep(0, 15);
+        } catch (Exception e) {
+            System.out.println("write server - " + e.getMessage());
+        }
     }
 
-    private void updateCurrentValue(int value) throws IOException {
-        ByteBuffer buffer = ByteBuffer.allocate(1024);
-        message = "U-"+value;
-        buffer.put(message.getBytes());
-        buffer.flip();
-        client.write(buffer);
+    private String readFromServer()   {
+        try {
+            ByteBuffer buffer = ByteBuffer.allocate(1024);
+            client.read(buffer);
+            return new String(buffer.array()).trim();
+        } catch (Exception e) {
+            System.out.println("read server - " + e.getMessage());
+            return null;
+        }
+    }
+
+    private int getCurrentValue()   {
+        try {
+            String t = "R-0";
+            writeToServer(t);
+
+            String data = readFromServer();
+
+            return Integer.parseInt(data);
+        } catch (Exception e) {
+            System.out.println("get value - " + e.getMessage());
+            return 0;
+        }
+    }
+
+    private void updateCurrentValue(int value)   {
+        try {
+            String t = "U-" + value;
+            writeToServer(t);
+        } catch (Exception e) {
+            System.out.println("update value - " + e.getMessage());
+        }
+    }
+
+    private void requestPriority()   {
+        try {
+            String res = "KO";
+            while (res.equals("KO")) {
+                String t = "P-" + id;
+                writeToServer(t);
+                res = readFromServer();
+            }
+        } catch (Exception e) {
+            System.out.println("priority - " + e.getMessage());
+        }
+    }
+
+    private void freePriority()   {
+        try {
+            String t = "F-" + id;
+            writeToServer(t);
+        } catch (Exception e) {
+            System.out.println("free - " + e.getMessage());
+        }
     }
 }

@@ -14,9 +14,11 @@ public class Server {
     private ServerSocketChannel socketChannel;
     private ServerSocket serverSocket;
     private int value;
+    private int idPriority;
 
     public Server() {
         try {
+            idPriority = -1;
             value = 0;
             selector = Selector.open();
             socketChannel = ServerSocketChannel.open();
@@ -54,34 +56,57 @@ public class Server {
                         //parse from buffer to string
                         String data = new String(buffer.array()).trim();
 
-                        serverEngine(data, client);
+                        if (!data.isEmpty()) {
+                            System.out.println("data: " + data);
+                            serverEngine(data, client);
+                        }
                     }
                     iterator.remove();
                 }
 
             } catch (Exception e) {
-                System.out.println("Exception run: " + e.getMessage());
+                System.out.println("Exception server: " + e.getMessage());
                 break;
             }
         }
     }
 
-    private void serverEngine(String data, SocketChannel client) throws IOException {
+    private void serverEngine(String data, SocketChannel client) throws Exception {
         String[] trama = data.split("-");
 
-        if (trama[0].equals("U")) {
-            //UPDATE
-            System.out.println("Receive updated ...");
-            value = Integer.parseInt(trama[1]);
-        } else if (trama[0].equals("R")) {
-            //READ
-            System.out.println("Receive read ...");
-            String message = Integer.toString(value);
-
-            ByteBuffer buffer = ByteBuffer.allocate(1024);
-            buffer.put(message.getBytes());
-            buffer.flip();
-            client.write(buffer);
+        switch (trama[0]) {
+            case "P":
+                if (idPriority == -1) {
+                    idPriority = Integer.parseInt(trama[1]);
+                    writeToClient("OK", client);
+                } else {
+                    writeToClient("KO", client);
+                }
+                break;
+            case "F":
+                int id = Integer.parseInt(trama[1]);
+                if (idPriority == id) {
+                    idPriority = -1;
+                }
+                break;
+            case "U":
+                //UPDATE
+                System.out.println("Receive updated ...");
+                value = Integer.parseInt(trama[1]);
+                break;
+            case "R":
+                //READ
+                System.out.println("Receive read ...");
+                String message = Integer.toString(value);
+                writeToClient(message, client);
+                break;
         }
+    }
+
+    private void writeToClient(String message, SocketChannel client) throws Exception {
+        ByteBuffer buffer = ByteBuffer.allocate(1024);
+        buffer.put(message.getBytes());
+        buffer.flip();
+        client.write(buffer);
     }
 }
