@@ -9,7 +9,7 @@ import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Set;
 
-public class Server {
+public class Server extends Thread{
     private Selector selector;
     private ServerSocketChannel socketChannel;
     private ServerSocket serverSocket;
@@ -41,6 +41,10 @@ public class Server {
 
                 while (iterator.hasNext()) {
                     SelectionKey key = iterator.next();
+                    iterator.remove();
+
+                    if (!key.isValid())
+                        continue;
 
                     if (key.isAcceptable()) {
                         //new client
@@ -57,11 +61,9 @@ public class Server {
                         String data = new String(buffer.array()).trim();
 
                         if (!data.isEmpty()) {
-                            System.out.println("data: " + data);
                             serverEngine(data, client);
                         }
                     }
-                    iterator.remove();
                 }
 
             } catch (Exception e) {
@@ -108,5 +110,10 @@ public class Server {
         buffer.put(message.getBytes());
         buffer.flip();
         client.write(buffer);
+    }
+
+    @Override
+    public void run() {
+        startServer();
     }
 }
